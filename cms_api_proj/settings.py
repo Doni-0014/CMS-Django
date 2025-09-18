@@ -40,8 +40,9 @@ INSTALLED_APPS = [
     'Authentication',
     'Doctor',
     'Pharmacist',
-    'Receptionist',
-    'rest_framework.authtoken'
+    'Receptionist.apps.ReceptionistConfig',
+    'rest_framework.authtoken',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [

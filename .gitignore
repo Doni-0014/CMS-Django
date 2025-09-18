@@ -1,5 +1,5 @@
 # Python cache
-_pycache_/
+__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
@@ -47,3 +47,10 @@ dist/
 # Local configuration
 *.local
 *.secret
+
+# Ignore all Django migration files
+*/migrations/.py
+*/migrations/.pyc
+
+# But keep the _init_.py in migrations folders
+!/migrations/__init__.py
