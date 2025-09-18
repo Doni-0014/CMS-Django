@@ -3,6 +3,6 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'consultations', views.ConsultationViewSet)
-router.register(r'presctiptions/medicine', views.MedicinePrescriptionViewSet)
+router.register(r'prescriptions/medicine', views.MedicinePrescriptionViewSet)
 
 urlpatterns = router.urls

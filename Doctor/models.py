@@ -24,7 +24,6 @@ class MedicinePrescription(models.Model):
     frequency = models.CharField(max_length=200)
     duration_days = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
-    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"(Medicine) for consultation (self.consultation)"
