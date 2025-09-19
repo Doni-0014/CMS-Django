@@ -32,7 +32,7 @@ class ConsultationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Consultation
-        fields = ['consultation_id', 'appointment', 'patient', 'doctor', 'symptoms', 'diagnosis', 'notes', 'created_at', 'is_active', 'medicine_prescriptions']
+        fields = ['consultation_id', 'appointment', 'patient', 'doctor', 'symptoms', 'diagnosis', 'notes', 'created_at', 'medicine_prescriptions']
         read_only_fields = ['consultation_id', 'created_at', 'medicine_prescriptions']
 
     def validate_symptoms(self, value):
