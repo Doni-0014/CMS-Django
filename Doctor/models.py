@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from Authentication.models import Doctor
 # Create your models here.
 
 class Consultation(models.Model):
