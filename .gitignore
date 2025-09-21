@@ -1,0 +1,58 @@
+# Python cache
+_pycache_/
+*.py[cod]
+*.pyo
+*.pyd
+*.py.class
+
+# Virtual environment
+venv/
+myvenv/
+.env
+*.env
+
+# Django stuff
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Unit test / coverage reports
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+htmlcov/
+
+# PyInstaller
+*.spec
+build/
+dist/
+
+# Local configuration
+*.local
+*.secret
+
+
+# Ignore all Django migration files
+*/migrations/.py
+*/migrations/.pyc
+
+
+# But keep the _init_.py in migrations folders
+ !/migrations/_init_.py
