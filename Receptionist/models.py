@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-#duplicated file
-
-from django.db import models
-from django.contrib.auth.models import User
-
-class ReceptionistProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone = models.CharField(max_length=20, blank=True)
-
-    def __str__(self):
-        return self.user.username
-=======
 # Receptionist/models.py
 
 from decimal import Decimal
@@ -849,4 +836,3 @@ class BillItem(models.Model):
     
     def __str__(self):
         return f"{self.bill.bill_number} - {self.get_item_type_display()}: ₹{self.amount}"
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5

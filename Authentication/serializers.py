@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User,Group
 from .models import Specializations,Staff,Departments,Doctor
 from datetime import date
-from serializers import DoctorSerializer
+# from serializers import DoctorSerializer
 import re
 
 pattern_name=r'^[A-Za-z]+(?: [A-Za-z]+)*$'
@@ -30,17 +30,17 @@ class LoginSerializer(serializers.ModelSerializer):
         fields = ['username', 'password']
 
 class StaffSerializer(serializers.ModelSerializer):
-    doc=DoctorSerializer()
+    # doc=DoctorSerializer()
     class Meta:
         model= Staff
         fields='__all__'
 
-    def create(self, validated_data):
-        if self.role=='Doctor':
-            doc_data=validated_data.pop("Doc")
-            doc,_=Doctor.objects.get_or_create(**doc_data)
-            staff=Staff.objects.create(Doctor=doc,**validated_data)
-            return staff
+    # def create(self, validated_data):
+    #     if self.role=='Doctor':
+    #         doc_data=validated_data.pop("Doc")
+    #         doc,_=Doctor.objects.get_or_create(**doc_data)
+    #         staff=Staff.objects.create(Doctor=doc,**validated_data)
+    #         return staff
 
 
     def validate_StaffName(self,value):
@@ -103,12 +103,12 @@ class DepartmentSerializer(serializers.ModelSerializer):
         return value
     
 class DoctorSerializer(serializers.ModelSerializer):
-    staff=StaffSerializer()
-    dept=DepartmentSerializer()
-    spcl=SpecializationSerializer()
+    Staff=StaffSerializer(source="StaffId",read_only=True)
+    Dept=DepartmentSerializer(source="DeptId",read_only=True)
+    Spcl=SpecializationSerializer(source="SpecializationId",read_only=True)
     class Meta:
         model=Doctor
-        fields=["DocId","staff","dept","spcl","fee"]
+        fields=["Staff","Dept","Spcl"]
     def validate_fee(self,value):
         if not value<0:
             raise serializers.ValidationError("Fee should not be negative")

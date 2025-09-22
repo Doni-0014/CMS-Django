@@ -40,19 +40,10 @@ INSTALLED_APPS = [
     'Authentication',
     'Doctor',
     'Pharmacist',
-<<<<<<< HEAD
     'Receptionist',
     'rest_framework.authtoken',
     'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
-    'django_filters',
-    'corsheaders',
-=======
-    'Receptionist.apps.ReceptionistConfig',
-    'rest_framework.authtoken',
-    'rest_framework'
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5
+    'django_filters'
 ]
 
 MIDDLEWARE = [
