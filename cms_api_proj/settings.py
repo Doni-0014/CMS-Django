@@ -49,7 +49,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'Receptionist.apps.ReceptionistConfig',
     'rest_framework.authtoken',
-    'rest_framework'
+    'rest_framework',
+    'django_filters'
+
 ]
 
 MIDDLEWARE = [
