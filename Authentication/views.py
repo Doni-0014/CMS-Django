@@ -14,10 +14,6 @@ class Home(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        content = {'message': 'Hello, World!'}
-        return Response(content)
-
 def get_tokens(user):
     refresh=RefreshToken.for_user(user)
     return{
@@ -77,6 +73,7 @@ class LoginView(APIView):
         return Response(response, status = status.HTTP_400_BAD_REQUEST)
     
 class StaffView(viewsets.ModelViewSet):
+    permission_classes=[permissions.AllowAny]
     queryset=Staff.objects.all()
     serializer_class=StaffSerializer
 
@@ -89,5 +86,6 @@ class DepartmentView(viewsets.ModelViewSet):
     serializer_class=DepartmentSerializer
 
 class DoctorView(viewsets.ModelViewSet):
+    permission_classes=[permissions.AllowAny]
     queryset=Doctor.objects.all()
     serializer_class=DoctorSerializer

@@ -39,9 +39,15 @@ class Specializations(models.Model):
     SpclId=models.AutoField(primary_key=True)
     SpclName=models.CharField (max_length=20,blank=False)  
 
+    def __str__(self):
+        return self.SpclName
+
 class Doctor(models.Model):
     DocId=models.AutoField(primary_key=True)
     StaffId=models.ForeignKey(Staff,on_delete=models.CASCADE,blank=False)
     DeptId=models.ForeignKey(Departments,on_delete=models.CASCADE,blank=False)
     SpecializationId=models.ForeignKey(Specializations,on_delete=models.CASCADE,blank=False)
     Fee=models.DecimalField(max_digits=5,decimal_places=3)
+    
+    def __str__(self):
+        return f"DocID: {self.DocId}, Staff: {self.StaffId}"

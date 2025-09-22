@@ -8,9 +8,9 @@ from Receptionist.models import Appointment, Patient
 
 class Consultation(models.Model):
     consultation_id = models.CharField(max_length=20, primary_key=True, editable=False)
-    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL)
-    patient = models.ForeignKey(Patient, on_delete=models.SET_NULL)
-    doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL)
+    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL,null=True,blank=True)
+    patient = models.ForeignKey(Patient, on_delete=models.SET_NULL,null=True,blank=True)
+    doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL,null=True,blank=True)
     symptoms = models.TextField(blank=True)
     diagnosis = models.TextField(blank=True)
     notes = models.TextField(blank=True)
@@ -33,8 +33,8 @@ class Consultation(models.Model):
 
 class MedicinePrescription(models.Model):
     prescription_id = models.CharField(max_length=20, primary_key=True, editable=False)
-    consultation = models.ForeignKey(Consultation, on_delete=models.SET_NULL)
-    medicine = models.ForeignKey()
+    consultation = models.ForeignKey(Consultation, on_delete=models.SET_NULL,null=True,blank=True)
+    medicine_name = models.CharField(max_length=200,help_text="Name of the medicine prescribed")
     dosage = models.CharField(max_length=200)
     frequency = models.CharField(max_length=200)
     duration_days = models.PositiveIntegerField(null=True, blank=True)
