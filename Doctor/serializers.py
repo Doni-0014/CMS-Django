@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-#duplicated file
-
-from rest_framework import serializers
-from .models import Doctor
-
-class DoctorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Doctor
-        fields = ['id', 'name', 'specialty', 'phone']
-=======
 from rest_framework import serializers
 from .models import Consultation, MedicinePrescription
 
@@ -60,4 +49,3 @@ class ConsultationSerializer(serializers.ModelSerializer):
         if value and len(value.strip())<5:
             raise serializers.ValidationError("Notes must be atleast 5 characters long!")
         return value
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5

@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-#duplicated file
-
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .models import ReceptionistProfile
-from .serializers import ReceptionistProfileSerializer
-
-class ReceptionistProfileViewSet(viewsets.ModelViewSet):
-    queryset = ReceptionistProfile.objects.all()
-    serializer_class = ReceptionistProfileSerializer
-    permission_classes = [IsAuthenticated]
-=======
 # Receptionist/views.py
 
 from rest_framework import viewsets, status
@@ -497,4 +484,3 @@ class AdminReportsViewSet(viewsets.ViewSet):
             'message': 'Dashboard statistics',
             'data': stats
         })
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5

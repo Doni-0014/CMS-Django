@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-#duplicated file
-
-from rest_framework import serializers
-from .models import ReceptionistProfile
-
-class ReceptionistProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReceptionistProfile
-        fields = ['id', 'user', 'phone']
-=======
 # Receptionist/serializers.py
 
 from rest_framework import serializers
@@ -255,4 +244,3 @@ class ErrorResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     field = serializers.CharField(required=False)
     data = serializers.JSONField(required=False, default=None)
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5
