@@ -46,13 +46,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
-    'corsheaders',
-    'Receptionist.apps.ReceptionistConfig',
-    'rest_framework.authtoken',
-    'rest_framework',
-    'django_filters'
-
-]
+    'corsheaders'
+    ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
