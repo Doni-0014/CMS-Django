@@ -1,16 +1,6 @@
 #duplicated file
 
 from django.db import models
-<<<<<<< HEAD
-
-class Doctor(models.Model):
-    name = models.CharField(max_length=100)
-    specialty = models.CharField(max_length=100, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-
-    def __str__(self):
-        return self.name
-=======
 from django.utils import timezone
 from Authentication.models import Doctor
 from Receptionist.models import Appointment, Patient
@@ -63,4 +53,3 @@ class MedicinePrescription(models.Model):
 
     def __str__(self):
         return f"(Medicine) for consultation: {self.consultation.consultation_id}"
->>>>>>> c7f23ddb54f0b42c7ea05877b0e8c8fbfbfa92b5
