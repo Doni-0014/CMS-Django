@@ -50,56 +50,115 @@ class MedicineSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'medicine_id', 's_no', 'total_sold', 'total_revenue', 'created_at', 'updated_at'
         ]
-    
+
+    def validate_company_name(self, value):
+        if not value:
+            return value
+        
+        # Check minimum length
+        if len(value.strip()) < 2:
+            raise serializers.ValidationError("Company name must have at least 2 characters")
+        
+        # Check for alphabets only (allows spaces and hyphens for company names like "Johnson & Johnson")
+        import re
+        if not re.match(r'^[A-Za-z\s&.-]+$', value.strip()):
+            raise serializers.ValidationError("Company name can only contain alphabets, spaces, and common business characters (&, -, .)")
+        
+        return value.title().strip()
+
     def validate_medicine_name(self, value):
         if len(value.strip()) < 3:
             raise serializers.ValidationError("Medicine name must have at least 3 characters")
+        
+        # Allow alphabets, numbers, spaces, hyphens (for medicine names like "Paracetamol-500")
+        import re
+        if not re.match(r'^[A-Za-z0-9\s-]+$', value.strip()):
+            raise serializers.ValidationError("Medicine name can only contain alphabets, numbers, spaces, and hyphens")
+        
         return value.title().strip()
-    
+
+    def validate_generic_name(self, value):
+        if len(value.strip()) < 2:
+            raise serializers.ValidationError("Generic name must have at least 2 characters")
+        
+        # Similar to medicine name validation
+        import re
+        if not re.match(r'^[A-Za-z0-9\s-]+$', value.strip()):
+            raise serializers.ValidationError("Generic name can only contain alphabets, numbers, spaces, and hyphens")
+        
+        return value.title().strip()
+
     def validate_medicine_code(self, value):
         if len(value.strip()) < 3:
             raise serializers.ValidationError("Medicine code must have at least 3 characters")
+        
+        # Allow only alphanumeric characters and common separators
+        import re
+        if not re.match(r'^[A-Za-z0-9_-]+$', value.strip()):
+            raise serializers.ValidationError("Medicine code can only contain alphabets, numbers, underscores, and hyphens")
+        
         return value.upper().strip()
-    
-    def validate_expiry_date(self, value):
-        if value <= date.today():
-            raise serializers.ValidationError("Expiry date must be in the future")
-        return value
-    
-    def validate_manufacturing_date(self, value):
-        if value >= date.today():
-            raise serializers.ValidationError("Manufacturing date cannot be in the future")
-        return value
-    
-    def validate_price(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Price must be positive")
-        if value > 50000:
-            raise serializers.ValidationError("Price cannot exceed ₹50,000")
-        return value
-    
+
     def validate_quantity(self, value):
+        # DRF automatically ensures it's an integer, but add extra checks
         if value < 0:
             raise serializers.ValidationError("Quantity cannot be negative")
         if value > 9999:
             raise serializers.ValidationError("Quantity cannot exceed 9,999")
-        return value
-    
-    def validate_patient_phone(self, value):
-        if value and (not value.isdigit() or len(value) != 10 or value[0] not in '6789'):
-            raise serializers.ValidationError("Phone number must be 10 digits starting with 6, 7, 8, or 9")
-        return value
-    
-    def validate(self, attrs):
-        manufacturing_date = attrs.get('manufacturing_date')
-        expiry_date = attrs.get('expiry_date')
         
-        if manufacturing_date and expiry_date and manufacturing_date >= expiry_date:
-            raise serializers.ValidationError({
-                'expiry_date': 'Expiry date must be after manufacturing date'
-            })
+        # Additional check to ensure it's a whole number (not decimal)
+        if not isinstance(value, int):
+            raise serializers.ValidationError("Quantity must be a whole number")
         
-        return attrs
+        return value
+
+    def validate_price(self, value):
+        # DRF automatically ensures it's a decimal, but add extra checks
+        if value <= 0:
+            raise serializers.ValidationError("Price must be positive")
+        if value > 50000:
+            raise serializers.ValidationError("Price cannot exceed ₹50,000")
+        
+        # Ensure maximum 2 decimal places
+        decimal_places = len(str(value).split('.')[-1]) if '.' in str(value) else 0
+        if decimal_places > 2:
+            raise serializers.ValidationError("Price can have maximum 2 decimal places")
+        
+        return value
+
+    def validate_patient_name(self, value):
+        if not value:
+            return value
+        
+        if len(value.strip()) < 3:
+            raise serializers.ValidationError("Patient name must have at least 3 characters")
+        
+        # Allow only alphabets and spaces (no numbers in names)
+        import re
+        if not re.match(r'^[A-Za-z\s]+$', value.strip()):
+            raise serializers.ValidationError("Patient name can only contain alphabets and spaces")
+        
+        return value.title().strip()
+
+    def validate_batch_number(self, value):
+        if len(value.strip()) < 3:
+            raise serializers.ValidationError("Batch number must have at least 3 characters")
+        
+        # Allow alphanumeric characters and common batch separators
+        import re
+        if not re.match(r'^[A-Za-z0-9/_-]+$', value.strip()):
+            raise serializers.ValidationError("Batch number can only contain alphabets, numbers, and separators (/, _, -)")
+        
+        return value.upper().strip()
+    def validate_manufacturing_date(self, value):
+        if value > date.today():
+            raise serializers.ValidationError("Manufacturing date cannot be in the future")
+        return value
+    def validate_expiry_date(self, value):
+        if value <= date.today():
+            raise serializers.ValidationError("Expiry date must be a future date")
+        return value
+                                       
     
     def create(self, validated_data):
         request = self.context.get('request')
