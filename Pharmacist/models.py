@@ -183,22 +183,30 @@ class Bill(models.Model):
             models.Index(fields=['patient_reg_number']),
         ]
     
-    def save(self, *args, **kwargs):
-        # Auto-generate bill number
-        if not self.bill_number:
-            last_bill = Bill.objects.order_by('-created_at').first()
-            num = int(last_bill.bill_number.split('BILL')[1]) + 1 if last_bill else 1
-            self.bill_number = f"BILL{num:06d}"
-        
-        # Workflow status updates
-        if self.payment_status == 'PAID' and not self.paid_at:
-            self.paid_at = timezone.now()
-            self.is_reported_to_admin = True
-            
-            # Auto-create sales record
-            PharmacySales.create_from_bill(self)
-        
-        super().save(*args, **kwargs)
+   # Remove the PharmacySales.create_from_bill(self) from Bill.save()
+def save(self, *args, **kwargs):
+    # Auto-generate bill number
+    if not self.bill_number:
+        last_bill = Bill.objects.order_by('-created_at').first()
+        num = int(last_bill.bill_number.split('BILL')[1]) + 1 if last_bill else 1
+        self.bill_number = f"BILL{num:06d}"
+    
+    # Workflow status updates
+    if self.payment_status == 'PAID' and not self.paid_at:
+        self.paid_at = timezone.now()
+        self.is_reported_to_admin = True
+    
+    super().save(*args, **kwargs)
+
+# Add this at the end of models.py
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Bill)
+def create_sales_record(sender, instance, **kwargs):
+    if instance.payment_status == 'PAID' and not hasattr(instance, 'pharmacy_sale'):
+        PharmacySales.create_from_bill(instance)
+
     
     def clean(self):
         if len(self.patient_name.strip()) < 3:

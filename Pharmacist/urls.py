@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import (
     TokenBlacklistView
 )
 from . import views
+from django.contrib import admin
 
 # Create router for ViewSets
 router = DefaultRouter()
@@ -34,3 +35,7 @@ urlpatterns = [
     # # Additional custom endpoints (if needed)
     # path('api/test/', views.UtilityViewSet.as_view({'get': 'system_stats'}), name='test-endpoint'),
 ]
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('', include('Pharmacist.urls')),
+# ]
