@@ -7,8 +7,13 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from django.utils import timezone
+from datetime import date, timedelta
+from rest_framework.decorators import api_view
+from django.db.models import Sum
 
-from .models import Patient, Doctor, Registration, Appointment, Bill, BillItem
+from .models import Patient, Registration, Appointment, Bill, BillItem
+from Authentication.models import Doctor  # Import real Doctor
 from .serializers import (
     PatientSerializer, DoctorSerializer, RegistrationSerializer,
     AppointmentSerializer, BillSerializer, PatientSearchSerializer,
@@ -180,6 +185,20 @@ class RegistrationViewSet(viewsets.ModelViewSet):
             'message': f'Found {expiring_registrations.count()} registrations expiring soon',
             'data': serializer.data
         })
+    
+    @action(detail=False, methods=['get'])
+    def expiring(self, request):
+        """Get registrations expiring soon (within 30 days)"""
+        from datetime import date, timedelta
+        expiry_date = date.today() + timedelta(days=30)
+        
+        expiring_registrations = self.queryset.filter(
+            expiry_date__lte=expiry_date,  # Changed from registration_expiry_date
+            expiry_date__gte=date.today()  # Changed from registration_expiry_date
+        )
+        
+        serializer = self.get_serializer(expiring_registrations, many=True)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def in_grace_period(self, request):
@@ -484,3 +503,58 @@ class AdminReportsViewSet(viewsets.ViewSet):
             'message': 'Dashboard statistics',
             'data': stats
         })
+
+@api_view(['GET'])
+def dashboard_stats(request):
+    from Authentication.models import Staff  # ✅ Import Staff, not CustomUser!
+    
+    today = date.today()
+    
+    # Get counts
+    patients_today = Patient.objects.count()  # All patients
+    appointments_today = Appointment.objects.filter(
+        status__in=['confirmed', 'phone_booked']
+    ).count()
+    pending_appointments = Appointment.objects.filter(
+        status='pending'
+    ).count()
+    revenue_today = Bill.objects.filter(
+        payment_status='paid'
+    ).aggregate(total=Sum('final_amount'))['total'] or 0
+    
+    next_week = today + timedelta(days=7)
+    expiring_registrations = Registration.objects.filter(
+        expiry_date__lte=next_week,
+        expiry_date__gte=today,
+        is_active=True
+    ).count()
+    
+    # Get doctors from Authentication.Staff where Role='Doctor' and IsActive=True
+    available_doctors = Staff.objects.filter(
+        Role='Doctor',  # ✅ Filter by Role field
+        IsActive=True   # ✅ Use IsActive (capital I and A)
+    ).count()
+    
+    return Response({
+        'patients_today': patients_today,
+        'appointments_today': appointments_today,
+        'pending_appointments': pending_appointments,
+        'revenue_today': float(revenue_today),
+        'expiring_registrations': expiring_registrations,
+        'available_doctors': available_doctors
+    })
+
+@api_view(['GET'])
+def doctor_list(request):
+    """Get list of all active doctors"""
+    from Authentication.models import Staff
+    
+    doctors = Staff.objects.filter(
+        Role='Doctor',
+        IsActive=True
+    ).values('StaffId', 'StaffName', 'Experience', 'Email', 'Phone')
+    
+    return Response({
+        'status': 'success',
+        'data': list(doctors)
+    })

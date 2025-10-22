@@ -7,3 +7,8 @@ mysqlclient==2.2.7
 PyJWT==2.10.1
 sqlparse==0.5.3
 tzdata==2025.2
+
+# NEW ADDITIONS:
+django-cors-headers==4.3.1      # For React frontend CORS
+django-filter==24.2             # For Pharmacist app filtering
+python-dateutil==2.8.2          # For proper date handling in Receptionist
