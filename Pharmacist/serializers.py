@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from datetime import date
 from .models import MedicineCategory, Medicine, Bill, BillMedicine, PharmacySales
+from Authentication.models import Doctor as AuthDoctor
+from Receptionist.models import Patient
 
 class MedicineCategorySerializer(serializers.ModelSerializer):
     """Medicine category with essential validations"""
@@ -14,7 +16,7 @@ class MedicineCategorySerializer(serializers.ModelSerializer):
         model = MedicineCategory
         fields = [
             'category_id', 's_no', 'category_name', 'description', 
-            'is_active', 'medicine_count', 'created_by_name', 'created_at'
+            'is_active', 'created_at'
         ]
         read_only_fields = ['category_id', 's_no', 'created_at']
     
@@ -30,25 +32,29 @@ class MedicineCategorySerializer(serializers.ModelSerializer):
         return MedicineCategory.objects.create(**validated_data)
 
 class MedicineSerializer(serializers.ModelSerializer):
-    """Medicine with comprehensive validations"""
-    s_no = serializers.IntegerField(read_only=True)
+    """
+    CLEAN Medicine Serializer - INVENTORY ONLY
+    Excludes patient/doctor fields (they belong in Bill)
+    """
     category_name = serializers.CharField(source='category.category_name', read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
     is_expiring_soon = serializers.BooleanField(read_only=True)
-    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     
     class Meta:
         model = Medicine
         fields = [
-            'medicine_id', 's_no', 'category', 'category_name', 'medicine_code', 
-            'medicine_name', 'generic_name', 'company_name', 'quantity', 'price',
-            'low_stock_threshold', 'batch_number', 'manufacturing_date', 'expiry_date',
-            'patient_reg_number', 'patient_name', 'patient_phone', 'prescribed_by_doctor',
-            'is_active', 'total_sold', 'total_revenue', 'is_low_stock', 'is_expiring_soon',
-            'created_by_name', 'created_at', 'updated_at'
+            'medicine_id', 's_no',
+            'category', 'category_name',
+            'medicine_code', 'medicine_name', 'generic_name', 'company_name',
+            'quantity', 'price', 'low_stock_threshold',
+            'batch_number', 'manufacturing_date', 'expiry_date',
+            'is_active', 'is_low_stock', 'is_expiring_soon',
+            'total_sold', 'total_revenue',
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'medicine_id', 's_no', 'total_sold', 'total_revenue', 'created_at', 'updated_at'
+            'medicine_id', 's_no', 'total_sold', 'total_revenue',
+            'created_at', 'updated_at', 'is_low_stock', 'is_expiring_soon'
         ]
 
     def validate_company_name(self, value):
@@ -179,17 +185,15 @@ class MedicineSerializer(serializers.ModelSerializer):
 
 class MedicineListSerializer(serializers.ModelSerializer):
     """Simplified medicine for list views"""
-    s_no = serializers.IntegerField(read_only=True)
+    
     category_name = serializers.CharField(source='category.category_name', read_only=True)
-    is_low_stock = serializers.BooleanField(read_only=True)
-    is_expiring_soon = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Medicine
         fields = [
             'medicine_id', 's_no', 'medicine_code', 'medicine_name', 
             'category_name', 'quantity', 'price', 'expiry_date',
-            'is_active', 'is_low_stock', 'is_expiring_soon'
+            'is_active'
         ]
 
 class BillMedicineSerializer(serializers.ModelSerializer):
@@ -239,24 +243,36 @@ class BillMedicineSerializer(serializers.ModelSerializer):
         return attrs
 
 class BillSerializer(serializers.ModelSerializer):
-    """Complete bill with workflow validations"""
-    bill_medicines = BillMedicineSerializer(many=True)
-    pharmacist_name = serializers.CharField(source='pharmacist.get_full_name', read_only=True)
-    doctor_name = serializers.CharField(source='prescribing_doctor.get_full_name', read_only=True)
+    """
+    Bill Serializer - Contains patient/doctor information
+    """
+    patient_full_name = serializers.CharField(source='patient.full_name', read_only=True)
+    doctor_full_name = serializers.CharField(source='prescribing_doctor.doctor_name', read_only=True)
+    pharmacist_name = serializers.CharField(source='pharmacist.username', read_only=True)
     
     class Meta:
         model = Bill
         fields = [
-            'bill_id', 'bill_number', 'patient_reg_number', 'patient_name',
-            'patient_phone', 'patient_dob', 'prescribing_doctor', 'doctor_name',
-            'pharmacist', 'pharmacist_name', 'doctor_verification_status',
-            'bill_medicines', 'subtotal', 'tax_amount', 'discount_amount',
-            'total_amount', 'payment_status', 'payment_method', 'paid_amount',
+            'bill_id', 'bill_number',
+            # Patient info (where it belongs!)
+            'patient', 'patient_full_name', 'patient_name', 'patient_reg_number',
+            'patient_phone', 'patient_dob',
+            # Doctor info (where it belongs!)
+            'prescribing_doctor', 'doctor_full_name',
+            'prescription',
+            # Pharmacist info
+            'pharmacist', 'pharmacist_name',
+            # Financial
+            'subtotal', 'tax_amount', 'discount_amount', 'total_amount',
+            'payment_status', 'payment_method', 'paid_amount',
+            # Workflow
+            'doctor_verification_status', 'is_reported_to_admin',
+            # Timestamps
             'created_at', 'doctor_verified_at', 'paid_at'
         ]
         read_only_fields = [
-            'bill_id', 'bill_number', 'pharmacist', 'subtotal', 'total_amount',
-            'created_at', 'doctor_verified_at', 'paid_at'
+            'bill_id', 'bill_number', 'patient_full_name', 'doctor_full_name',
+            'pharmacist_name', 'created_at', 'doctor_verified_at', 'paid_at'
         ]
     
     def validate_patient_name(self, value):
@@ -322,46 +338,42 @@ class BillSerializer(serializers.ModelSerializer):
         return bill
 
 class BillListSerializer(serializers.ModelSerializer):
-    """Simplified bill for list views"""
-    pharmacist_name = serializers.CharField(source='pharmacist.get_full_name', read_only=True)
-    doctor_name = serializers.CharField(source='prescribing_doctor.get_full_name', read_only=True)
-    medicine_count = serializers.IntegerField(source='bill_medicines.count', read_only=True)
+    """Minimal bill list serializer"""
+    patient_full_name = serializers.CharField(source='patient.full_name', read_only=True)
+    doctor_full_name = serializers.CharField(source='prescribing_doctor.doctor_name', read_only=True)
     
     class Meta:
         model = Bill
         fields = [
-            'bill_id', 'bill_number', 'patient_name', 'patient_reg_number',
-            'pharmacist_name', 'doctor_name', 'total_amount', 'payment_status',
-            'medicine_count', 'created_at'
+            'bill_id', 'bill_number', 'patient_name', 'patient_full_name',
+            'doctor_full_name', 'total_amount', 'payment_status', 'created_at'
         ]
 
 class PharmacySalesSerializer(serializers.ModelSerializer):
-    """Sales tracking with essential analytics"""
-    s_no = serializers.IntegerField(read_only=True)
-    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
-    pharmacist_name = serializers.CharField(source='pharmacist.get_full_name', read_only=True)
-    doctor_name = serializers.CharField(source='prescribing_doctor.get_full_name', read_only=True)
+    """Pharmacy sales records"""
+    pharmacist_name = serializers.CharField(source='pharmacist.username', read_only=True)
+    doctor_name = serializers.CharField(source='prescribing_doctor.doctor_name', read_only=True)
     
     class Meta:
         model = PharmacySales
         fields = [
-            'sales_id', 's_no', 'bill_number', 'patient_name',
-            'pharmacist_name', 'doctor_name', 'total_amount', 
-            'payment_method', 'total_items', 'sale_date', 'created_at'
+            'sales_id', 's_no', 'bill', 'patient_name',
+            'pharmacist', 'pharmacist_name',
+            'prescribing_doctor', 'doctor_name',
+            'total_amount', 'payment_method', 'total_items',
+            'sale_date', 'created_at'
         ]
-        read_only_fields = ['sales_id', 's_no', 'sale_date', 'created_at']
+        read_only_fields = ['sales_id', 's_no', 'created_at']
 
 class PharmacySalesListSerializer(serializers.ModelSerializer):
-    """Simplified sales for admin dashboards"""
-    s_no = serializers.IntegerField(read_only=True)
-    bill_number = serializers.CharField(source='bill.bill_number', read_only=True)
-    pharmacist_name = serializers.CharField(source='pharmacist.get_full_name', read_only=True)
+    """Minimal sales list"""
+    pharmacist_name = serializers.CharField(source='pharmacist.username', read_only=True)
     
     class Meta:
         model = PharmacySales
         fields = [
-            'sales_id', 's_no', 'bill_number', 'patient_name',
-            'pharmacist_name', 'total_amount', 'payment_method', 'sale_date'
+            'sales_id', 's_no', 'patient_name', 'pharmacist_name',
+            'total_amount', 'payment_method', 'sale_date'
         ]
 
 # Utility serializers
@@ -374,12 +386,10 @@ class PharmacistUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'is_active']
 
 class DoctorListSerializer(serializers.ModelSerializer):
-    """Doctor list for prescriptions"""
-    full_name = serializers.CharField(source='get_full_name', read_only=True)
-    
+    """Simple doctor list for dropdowns"""
     class Meta:
-        model = User
-        fields = ['id', 'username', 'full_name', 'email']
+        model = AuthDoctor
+        fields = ['doctor_id', 'doctor_name', 'department', 'specialization']
 
 # Search serializers
 class MedicineSearchSerializer(serializers.Serializer):
@@ -401,7 +411,7 @@ class BillSearchSerializer(serializers.Serializer):
         default='patient_name'
     )
     payment_status = serializers.ChoiceField(
-        choices=[('', 'All')] + Bill.PAYMENT_STATUS_CHOICES,
+        choices=[('', 'All')] +  Bill.PaymentStatus.choices,
         required=False
     )
     date_from = serializers.DateField(required=False)

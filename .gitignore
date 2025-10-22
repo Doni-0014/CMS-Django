@@ -55,4 +55,6 @@ dist/
 
 
 # But keep the _init_.py in migrations folders
- !/migrations/_init_.py
+ !/migrations/_init_.py"__pycache__/" 
+"*.pyc" 
+"*.pyo" 

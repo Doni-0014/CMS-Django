@@ -3,8 +3,9 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from datetime import date, datetime, timedelta
-from .models import Patient, Registration, Appointment, Doctor, Bill, BillItem
-
+from .models import Patient, Registration, Appointment, Bill, BillItem
+from Authentication.models import Doctor
+from Authentication.serializers import DoctorSerializer  # If you need nested serialization
 class PatientSerializer(serializers.ModelSerializer):
     """Patient serializer with dd-mm-yyyy date format and validations"""
     
@@ -87,27 +88,32 @@ class PatientSearchSerializer(serializers.Serializer):
         return query
 
 class DoctorSerializer(serializers.ModelSerializer):
-    """Temporary doctor serializer for testing"""
-    
     available_tokens_today = serializers.SerializerMethodField()
+    
+    def get_available_tokens_today(self, obj):
+        """Calculate available tokens for today"""
+        from datetime import date
+        today = date.today()
+        booked_today = obj.doctor_appointments.filter(
+            appointment_date=today
+        ).count()
+        return max(0, obj.daily_patient_limit - booked_today)
     
     class Meta:
         model = Doctor
         fields = [
-            'id', 'doctor_id', 'full_name', 'specialization', 'consultation_fee', 
-            'daily_patient_limit', 'is_available', 'available_tokens_today'
+            'id', 'doctor_id', 'full_name', 'specialization',
+            'consultation_fee', 'daily_patient_limit', 
+            'available_tokens_today', 'is_available'
         ]
-        read_only_fields = ['doctor_id']
-    
-    def get_available_tokens_today(self, obj):
-        """Get available tokens for today"""
-        return obj.get_available_tokens_for_date(date.today())
+
 
 # Receptionist/serializers.py
 
 class AppointmentSerializer(serializers.ModelSerializer):
     """Receptionist appointment creation with auto token assignment"""
-    
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+    doctor_name = serializers.CharField(source='doctor.full_name', read_only=True)
     appointment_date = serializers.CharField(write_only=True)  # Accept dd-mm-yyyy
     appointment_date_formatted = serializers.SerializerMethodField(read_only=True)
     appointment_time_slot = serializers.ReadOnlyField()
@@ -116,12 +122,18 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            'id', 'appointment_id', 'patient', 'doctor', 
+            'id', 'appointment_id', 'patient', 'patient_name', 'doctor', 'doctor_name',
             'appointment_date', 'appointment_date_formatted',
             'token_number', 'reason', 'status', 'appointment_time_slot',
             'is_revisit', 'is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['appointment_id', 'token_number']  # Auto-assigned by system
+        read_only_fields = ['appointment_id', 'token_number']
+
+    def get_appointment_date_formatted(self, obj):
+        """Return appointment date in dd-mm-yyyy format"""
+        if obj.appointment_date:
+            return obj.appointment_date.strftime('%d-%m-%Y')
+        return None
     
     def create(self, validated_data):
         """Receptionist creates appointment → Token auto-assigned"""
@@ -138,7 +150,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
         appointment = Appointment(**validated_data)
         appointment.save()  # This triggers token assignment
         return appointment
-
 
 class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating appointment status"""
@@ -170,15 +181,20 @@ class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
 class RegistrationSerializer(serializers.ModelSerializer):
     """Registration serializer"""
     
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+    registration_number = serializers.SerializerMethodField()
     status = serializers.ReadOnlyField()
     days_until_expiry = serializers.ReadOnlyField()
     registration_date_formatted = serializers.SerializerMethodField()
     expiry_date_formatted = serializers.SerializerMethodField()
+
+    def get_registration_number(self, obj):
+        return f"REG{obj.id:05d}"  # e.g., REG00001, REG00002
     
     class Meta:
         model = Registration
         fields = [
-            'id', 'patient', 'registration_date', 'registration_date_formatted',
+            'id', 'registration_number', 'patient','patient_name', 'registration_date', 'registration_date_formatted',
             'expiry_date', 'expiry_date_formatted', 'registration_type', 
             'fee_amount', 'status', 'days_until_expiry', 'is_active'
         ]
@@ -202,11 +218,28 @@ class BillSerializer(serializers.ModelSerializer):
     
     bill_items = BillItemSerializer(many=True, read_only=True)
     appointment_details = AppointmentSerializer(source='appointment', read_only=True)
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+
+    def get_patient_name(self, obj):
+        # Get patient name through appointment
+        if obj.appointment and obj.appointment.patient:
+            return obj.appointment.patient.full_name
+        return None
+    
+    def get_appointment_details(self, obj):
+        if obj.appointment:
+            return {
+                'appointment_id': obj.appointment.appointment_id,
+                'doctor_name': obj.appointment.doctor.full_name if obj.appointment.doctor else None,
+                'appointment_date': obj.appointment.appointment_date.strftime('%d-%m-%Y') if obj.appointment.appointment_date else None,
+                'token_number': obj.appointment.token_number
+            }
+        return None
     
     class Meta:
         model = Bill
         fields = [
-            'id', 'bill_number', 'appointment', 'appointment_details',
+            'id', 'bill_number', 'patient_name', 'appointment', 'appointment_details',
             'total_amount', 'discount_amount', 'final_amount', 
             'payment_status', 'payment_mode', 'bill_items',
             'created_at', 'paid_at'
