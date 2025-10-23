@@ -506,43 +506,85 @@ class AdminReportsViewSet(viewsets.ViewSet):
 
 @api_view(['GET'])
 def dashboard_stats(request):
-    from Authentication.models import Staff  # ✅ Import Staff, not CustomUser!
-    
+    from Authentication.models import Staff
     today = date.today()
     
-    # Get counts
-    patients_today = Patient.objects.count()  # All patients
-    appointments_today = Appointment.objects.filter(
-        status__in=['confirmed', 'phone_booked']
-    ).count()
-    pending_appointments = Appointment.objects.filter(
-        status='pending'
-    ).count()
-    revenue_today = Bill.objects.filter(
-        payment_status='paid'
-    ).aggregate(total=Sum('final_amount'))['total'] or 0
+    # Patient counts
+    patientstoday = Patient.objects.count()
     
-    next_week = today + timedelta(days=7)
-    expiring_registrations = Registration.objects.filter(
-        expiry_date__lte=next_week,
+    # Appointment counts
+    appointmentstoday = Appointment.objects.filter(status__in=['confirmed', 'phonebooked']).count()
+    pendingappointments = Appointment.objects.filter(status='pending').count()
+    
+    # Revenue
+    revenuetoday = Bill.objects.filter(payment_status='paid').aggregate(total=Sum('final_amount'))['total'] or 0
+    
+    # Expiring registrations count
+    nextweek = today + timedelta(days=7)
+    expiringregistrations = Registration.objects.filter(
+        expiry_date__lte=nextweek,
         expiry_date__gte=today,
         is_active=True
     ).count()
     
-    # Get doctors from Authentication.Staff where Role='Doctor' and IsActive=True
-    available_doctors = Staff.objects.filter(
-        Role='Doctor',  # ✅ Filter by Role field
-        IsActive=True   # ✅ Use IsActive (capital I and A)
-    ).count()
+    # Available doctors count
+    availabledoctors = Staff.objects.filter(role='Doctor', is_active=True).count()
+    
+    # Recent registrations with patient details (last 10)
+    recent_registrations = Registration.objects.select_related('patient').order_by('-registration_date')[:10]
+    registrations_data = []
+    for reg in recent_registrations:
+        registrations_data.append({
+            'id': reg.id,
+            'patient_reg_number': reg.patient.patient_reg_number,  # Changed: access through patient
+            'full_name': reg.patient.full_name,  # Changed: access through patient
+            'registration_date': reg.registration_date.strftime('%d-%m-%Y'),
+            'registration_date_formatted': reg.registration_date.strftime('%d-%m-%Y'),
+            'expiry_date': reg.expiry_date.strftime('%d-%m-%Y'),
+            'expiry_date_formatted': reg.expiry_date.strftime('%d-%m-%Y'),
+            'registration_status': reg.registration_status,
+        })
+    
+    # Recent appointments (last 10)
+    recent_appointments = Appointment.objects.select_related('patient', 'doctor').order_by('-created_at')[:10]
+    appointments_data = []
+    for apt in recent_appointments:
+        appointments_data.append({
+            'id': apt.id,
+            'patient_name': apt.patient.full_name,
+            'doctor_name': f"Dr. {apt.doctor.StaffName}" if apt.doctor else 'No doctor assigned',
+            'appointment_date': apt.appointment_date.strftime('%d-%m-%Y'),
+            'appointment_date_formatted': apt.appointment_date.strftime('%d-%m-%Y'),
+            'token_number': apt.token_number,
+            'status': apt.status,
+            'reason': apt.reason or '',
+        })
+    
+    # Recent bills (last 10)
+    recent_bills = Bill.objects.select_related('appointment__patient').order_by('-created_at')[:10]
+    bills_data = []
+    for bill in recent_bills:
+        bills_data.append({
+            'id': bill.id,
+            'bill_number': bill.bill_number,
+            'patient_name': bill.appointment.patient.full_name if bill.appointment else 'N/A',
+            'amount': float(bill.final_amount),
+            'payment_status': bill.payment_status,
+            'created_at': bill.created_at.strftime('%d-%m-%Y'),
+        })
     
     return Response({
-        'patients_today': patients_today,
-        'appointments_today': appointments_today,
-        'pending_appointments': pending_appointments,
-        'revenue_today': float(revenue_today),
-        'expiring_registrations': expiring_registrations,
-        'available_doctors': available_doctors
+        'patientstoday': patientstoday,
+        'appointmentstoday': appointmentstoday,
+        'pendingappointments': pendingappointments,
+        'revenuetoday': float(revenuetoday),
+        'expiringregistrations': expiringregistrations,
+        'availabledoctors': availabledoctors,
+        'registrations': registrations_data,
+        'appointments': appointments_data,
+        'bills': bills_data,
     })
+
 
 @api_view(['GET'])
 def doctor_list(request):
@@ -557,4 +599,80 @@ def doctor_list(request):
     return Response({
         'status': 'success',
         'data': list(doctors)
+    })
+
+# Receptionist/views.py
+
+@api_view(['GET'])
+def dashboard_notifications(request):
+    """
+    Get dashboard notifications for receptionist
+    Returns: new registrations, expiring registrations, low doctor availability, 
+             pending bills, cancelled appointments
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    today = timezone.now().date()
+    week_from_now = today + timedelta(days=7)
+    
+    # New registrations today
+    new_registrations = Registration.objects.filter(
+        registration_date=today
+    ).select_related('patient')[:5]
+    
+    # Registrations expiring within 7 days
+    expiring_registrations = Registration.objects.filter(
+        expiry_date__lte=week_from_now,
+        expiry_date__gte=today
+    ).select_related('patient')[:5]
+    
+    # Cancelled appointments today
+    cancelled_appointments = Appointment.objects.filter(
+        appointment_date=today,
+        status='Cancelled'
+    ).select_related('patient', 'doctor')[:5]
+    
+    # Pending bills (unpaid)
+    pending_bills = Bill.objects.filter(
+        payment_status='Unpaid'
+    ).select_related('appointment__patient')[:5]
+    
+    # Serialize data
+    new_reg_data = [{
+        'patient_name': reg.patient.full_name,
+        'patient_reg_number': reg.patient.patient_reg_number,
+        'registration_date': reg.registration_date.strftime('%d-%m-%Y'),
+    } for reg in new_registrations]
+    
+    expiring_reg_data = [{
+        'patient_name': reg.patient.full_name,
+        'patient_reg_number': reg.patient.patient_reg_number,
+        'expiry_date': reg.expiry_date.strftime('%d-%m-%Y'),
+        'days_left': (reg.expiry_date - today).days,
+    } for reg in expiring_registrations]
+    
+    cancelled_apt_data = [{
+        'patient_name': apt.patient.full_name,
+        'doctor_name': apt.doctor.doctor_name,
+        'appointment_date': apt.appointment_date.strftime('%d-%m-%Y'),
+        'token_number': apt.token_number,
+    } for apt in cancelled_appointments]
+    
+    pending_bills_data = [{
+        'bill_number': bill.bill_number,
+        'patient_name': bill.appointment.patient.full_name if bill.appointment else 'N/A',
+        'total_amount': float(bill.total_amount),
+        'created_at': bill.created_at.strftime('%d-%m-%Y %H:%M'),
+    } for bill in pending_bills]
+    
+    return Response({
+        'success': True,
+        'data': {
+            'newRegistrations': new_reg_data,
+            'expiringRegistrations': expiring_reg_data,
+            'cancelledAppointments': cancelled_apt_data,
+            'pendingBills': pending_bills_data,
+            'lowDoctorAvailability': [],  # Can add logic later if needed
+        }
     })

@@ -105,8 +105,8 @@ class Doctor(models.Model):
         db_column='SpecializationId_id'  # Note the _id suffix!
     )
     consultation_fee = models.DecimalField(
-        max_digits=5,  # Note: DB has max_digits=5, decimal_places=3
-        decimal_places=3,  # This seems wrong for money (should be 2), but matches DB
+        max_digits=10,  # Note: DB has max_digits=5, decimal_places=3
+        decimal_places=2,  # This seems wrong for money (should be 2), but matches DB
         validators=[MinValueValidator(0)],
         help_text="Consultation fee in rupees",
         db_column='Fee'
