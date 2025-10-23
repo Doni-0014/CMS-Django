@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Consultation, MedicinePrescription
 from .serializers import ConsultationSerializer, MedicinePrescriptionSerializer
 # Create your views here.
@@ -16,6 +17,7 @@ class MedicinePrescriptionViewSet(viewsets.ModelViewSet):
     queryset = MedicinePrescription.objects.all()
     serializer_class = MedicinePrescriptionSerializer
     # permission_classes = [IsDoctor]
-    #Search 
-    filter_backends = [filters.SearchFilter]
+    # Search and filter
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['consultation']
     search_fields = ['prescription_id']

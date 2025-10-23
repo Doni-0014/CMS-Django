@@ -30,6 +30,8 @@ class Staff(models.Model):
     joining_date = models.DateField(db_column='Joining_Date')
     role = models.CharField(max_length=15, choices=Roles.choices, db_column='Role')
     is_active = models.IntegerField(db_column='IsActive')  # Note: IntegerField in DB (0/1), not BooleanField
+    # Plain-text password field (temporary; replace with proper hashing later)
+    password = models.CharField(max_length=255, blank=True, null=True, db_column='Password')
     
     class Meta:
         managed = True  # Let Django manage this table

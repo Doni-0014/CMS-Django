@@ -77,6 +77,9 @@ class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff
         fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True, 'required': False}
+        }
     
     def validate_staff_name(self, value):
         if not re.match(pattern_name, value):

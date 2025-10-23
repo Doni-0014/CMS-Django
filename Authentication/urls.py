@@ -15,6 +15,7 @@ urlpatterns = [
     # Authentication endpoints
     path('signup/', views.SignUpView.as_view(), name='signup'),
     path('login/', views.LoginView.as_view(), name='login'),
+    path('staff-login/', views.StaffLoginView.as_view(), name='staff-login'),
     
     # Include all router URLs
     path('', include(router.urls)),

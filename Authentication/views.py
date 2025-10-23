@@ -7,6 +7,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions, status, viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
+from .custom_auth import StaffTokenAuthentication
 
 from .serializers import (
     SignUpSerializer, LoginSerializer, DepartmentSerializer, 
@@ -15,6 +16,7 @@ from .serializers import (
 from .models import Specializations, Staff, Departments, Doctor
 from django.contrib.auth import authenticate
 from cms_api_proj.pagination import CustomPageNumberPagination
+from django.contrib.auth.models import User
 
 
 class Home(APIView):
@@ -53,6 +55,63 @@ class SignUpView(APIView):
             return Response(res, status=status.HTTP_400_BAD_REQUEST)
 
 
+class StaffLoginView(APIView):
+    """
+    Custom login view that works with Staff model instead of Django User model
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response({ 'error': 'Email and password are required' }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Find active staff by email
+            staff = Staff.objects.get(email=email, is_active=1)
+            
+            # Backward-compat: allow default admin if no password set
+            if staff.email == 'admin@hospital.com' and password == 'admin1234':
+                pass
+            # If password exists on staff, require match
+            elif staff.password:
+                if staff.password != password:
+                    return Response({ 'error': 'Invalid credentials' }, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # No password stored and not default admin
+                return Response({ 'error': 'Invalid credentials' }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            token = f"staff_{staff.staff_id}_{staff.role}"
+
+            # Build safe JSON payload (avoid returning model instances)
+            doctor_profile = staff.doctor_profiles.first() if staff.role == 'Doctor' else None
+            dept = getattr(doctor_profile, 'department', None)
+            spcl = getattr(doctor_profile, 'specialization', None)
+
+            user_payload = {
+                'id': staff.staff_id,
+                'name': staff.staff_name,
+                'email': staff.email,
+                'role': staff.role,
+                'phone': staff.phone,
+                'department': {
+                    'id': getattr(dept, 'dept_id', None),
+                    'name': getattr(dept, 'dept_name', None)
+                } if dept else None,
+                'specialization': {
+                    'id': getattr(spcl, 'spcl_id', None),
+                    'name': getattr(spcl, 'spcl_name', None)
+                } if spcl else None
+            }
+            return Response({ 'access': token, 'refresh': token, 'user': user_payload }, status=status.HTTP_200_OK)
+        except Staff.DoesNotExist:
+            return Response({ 'error': 'Invalid credentials' }, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception:
+            return Response({ 'error': 'Login failed' }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     
@@ -69,7 +128,7 @@ class LoginView(APIView):
                     "status": status.HTTP_200_OK,
                     "message": "success",
                     "username": user.username,
-                    "role": user.groups.all()[0].id if user.groups.exists() else None,
+                    "role": user.groups.all()[0].name if user.groups.exists() else None,
                     "data": {
                         "Token": token
                     }
@@ -95,7 +154,8 @@ class StaffView(viewsets.ModelViewSet):
     ViewSet for Staff CRUD operations
     Supports search, filter, and ordering
     """
-    permission_classes = [AllowAny]
+    authentication_classes = [StaffTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = Staff.objects.all()
     serializer_class = StaffSerializer
     pagination_class = CustomPageNumberPagination
@@ -110,6 +170,8 @@ class SpecializationView(viewsets.ModelViewSet):
     """
     ViewSet for Specializations CRUD
     """
+    authentication_classes = [StaffTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = Specializations.objects.all()
     serializer_class = SpecializationSerializer
     pagination_class = CustomPageNumberPagination
@@ -121,6 +183,8 @@ class DepartmentView(viewsets.ModelViewSet):
     """
     ViewSet for Departments CRUD
     """
+    authentication_classes = [StaffTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = Departments.objects.all()
     serializer_class = DepartmentSerializer
     pagination_class = CustomPageNumberPagination
@@ -133,7 +197,8 @@ class DoctorView(viewsets.ModelViewSet):
     ViewSet for Doctor CRUD
     FIXED: Removed is_active from filterset_fields (doesn't exist in Doctor table)
     """
-    permission_classes = [AllowAny]
+    authentication_classes = [StaffTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
     pagination_class = CustomPageNumberPagination
