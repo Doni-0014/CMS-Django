@@ -30,7 +30,7 @@ urlpatterns = [
     ])),
     
     # API endpoints - include all router URLs
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
     
     # # Additional custom endpoints (if needed)
     # path('api/test/', views.UtilityViewSet.as_view({'get': 'system_stats'}), name='test-endpoint'),
