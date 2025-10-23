@@ -5,7 +5,7 @@ from .views import (
     PatientViewSet, DoctorViewSet, RegistrationViewSet,
     AppointmentViewSet, BillViewSet, AdminReportsViewSet
 )
-from .views import dashboard_stats  
+from .views import dashboard_stats, dashboard_notifications
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -19,6 +19,6 @@ router.register(r'admin-reports', AdminReportsViewSet, basename='admin-reports')
 # URL patterns - REMOVE the 'api/' prefix since main urls.py already has it
 urlpatterns = [
     path('dashboard/stats/', dashboard_stats, name='dashboard-stats'),
-    
+    path('dashboard/notifications/', dashboard_notifications, name='dashboard-notifications'),
     path('', include(router.urls)),  # Changed from path('api/', ...) to path('', ...)
 ]

@@ -113,7 +113,7 @@ class DoctorSerializer(serializers.ModelSerializer):
 class AppointmentSerializer(serializers.ModelSerializer):
     """Receptionist appointment creation with auto token assignment"""
     patient_name = serializers.CharField(source='patient.full_name', read_only=True)
-    doctor_name = serializers.CharField(source='doctor.full_name', read_only=True)
+    doctor_name = serializers.SerializerMethodField(read_only=True)
     appointment_date = serializers.CharField(write_only=True)  # Accept dd-mm-yyyy
     appointment_date_formatted = serializers.SerializerMethodField(read_only=True)
     appointment_time_slot = serializers.ReadOnlyField()
@@ -128,6 +128,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'is_revisit', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['appointment_id', 'token_number']
+
+    def get_doctor_name(self, obj):
+        """Get doctor name from related staff"""
+        if obj.doctor and obj.doctor.staff:
+            return obj.doctor.staff.staff_name
+        return None
 
     def get_appointment_date_formatted(self, obj):
         """Return appointment date in dd-mm-yyyy format"""
