@@ -165,6 +165,16 @@ class StaffView(viewsets.ModelViewSet):
     ordering_fields = ['staff_id', 'staff_name', 'joining_date', 'experience']
     ordering = ['-staff_id']
 
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete: mark staff inactive instead of hard delete to avoid FK issues"""
+        instance = self.get_object()
+        try:
+            instance.is_active = 0
+            instance.save(update_fields=['is_active'])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception:
+            return Response({'error': 'Failed to deactivate staff'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class SpecializationView(viewsets.ModelViewSet):
     """
