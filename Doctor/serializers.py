@@ -26,7 +26,7 @@ class ConsultationSerializer(serializers.ModelSerializer):
             'created_at',
             'is_active'
         ]
-        read_only_fields = ['consultation_id', 'created_at']
+        read_only_fields = ['consultation_id', 'doctor', 'created_at']
     
     def validate_symptoms(self, value):
         if len(value) < 10:

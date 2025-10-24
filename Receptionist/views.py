@@ -3,6 +3,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from Authentication.custom_auth import StaffTokenAuthentication
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from datetime import date, datetime, timedelta
@@ -25,6 +27,8 @@ class PatientViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Patient management with search functionality
     """
+    authentication_classes = [StaffTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
     
