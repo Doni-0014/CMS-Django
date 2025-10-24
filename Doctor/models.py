@@ -16,7 +16,7 @@ class Consultation(models.Model):
         unique=True,
         editable=False,
         primary_key=True,
-        db_column='consultation_id'
+        db_column='consultationid'
     )
     
     # Links to other apps
@@ -24,7 +24,7 @@ class Consultation(models.Model):
         AuthDoctor,
         on_delete=models.CASCADE,
         related_name='consultations',
-        db_column='doctor_id',
+        db_column='doctorid',
         help_text="Doctor from Authentication app"
     )
     
@@ -32,7 +32,7 @@ class Consultation(models.Model):
         Patient,
         on_delete=models.CASCADE,
         related_name='consultations',
-        db_column='patient_id',
+        db_column='patientid',
         help_text="Patient from Receptionist app"
     )
     
@@ -42,7 +42,7 @@ class Consultation(models.Model):
         null=True,
         blank=True,
         related_name='consultations',
-        db_column='appointment_id',
+        db_column='appointmentid',
         help_text="Optional link to appointment"
     )
     

@@ -25,7 +25,8 @@ class Command(BaseCommand):
             experience=10,
             joining_date=date.today(),
             role='Admin',
-            is_active=1
+            is_active=1,
+            password='admin1234' # added pssword field
         )
 
         self.stdout.write(
